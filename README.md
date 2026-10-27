@@ -229,14 +229,6 @@ Trust-Evid is intended to assist with evidence organization and review, not to m
 
 ---
 
-## Project Status
-
-Refer to the repository and deployment configuration for the current implementation and deployment status.
-
-Feature availability may depend on database migrations, worker configuration, environment variables, and deployment state.
-
----
-
 ## License
 
 MIT License
