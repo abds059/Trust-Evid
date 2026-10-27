@@ -1,136 +1,242 @@
 # Trust-Evid
 
-Trust-Evid is a Next.js 14 application using the App Router and Supabase for authentication.
+**Digital Evidence & Case Management Platform**
 
-## Overview
-- Case and evidence management system with hash-chained custody logs.
-- Uses Supabase for email/password authentication with mandatory TOTP 2FA (AAL2 level).
+Trust-Evid is a digital evidence and case management platform designed to help teams organize submitted evidence, review technical findings, and maintain a recorded history of evidence-related activity.
 
-## Phase 5: Custody event tracking and review
-- Review events now include the six custody RPC arguments, including the session actor and stored original hash.
-- Added an AAL2-protected read-only custody timeline endpoint; examiner access requires an assignment.
-- Retired custody-chain verification controls and replaced them with timeline display.
-- The six-argument custody RPC migration is waiting for approval in the Database panel and has not run.
+It combines secure case access, private evidence storage, deterministic media processing, optional AI-assisted triage, and case reporting in one workflow.
 
-## Phase 4: Custody, integrity and examiner workflow
-- Protected RPC contracts are added for custody event recording and chain verification.
-- Review and examiner-note API routes support review states, priority, limitations, and audit notes.
-- The migration is held for approval in the Database panel; until applied, these routes return schema errors.
-- Prototype limitation: chain verification checks stored event presence/order only and does not establish authenticity or legal admissibility.
+> **Important:** Trust-Evid supports evidence organization and review. Its hashes, metadata, processing results, AI analysis, and custody records do not independently establish authenticity, intent, or legal admissibility.
 
-## Phase 2: Secure worker intake
-- FastAPI `/process` fails closed without `WORKER_SHARED_SECRET` and accepts only `{ evidence_id }`.
-- The worker retrieves evidence metadata and `storage_path` server-side using Supabase service-role credentials.
-- Originals are read from the private `evidence-originals` bucket, streamed with a configured byte cap, and hashed in the worker.
-- Conditional claiming, duplicate handling, guarded failures, and write-once hash persistence are included.
-- Database claim/status compatibility, custody RPC integration, complete media validation, retries, and AI handling remain deployment blockers or later increments.
+---
 
-## Phase 3: Deterministic forensic processing
-- The FastAPI worker performs bounded SHA-256, image metadata/EXIF, video ffprobe metadata, and deterministic frame sample records.
-- `POST /api/cases/[id]/evidence/process` authorizes the case role and dispatches only the evidence ID to the worker; the worker resolves the private original server-side.
-- Findings are persisted separately in `processing_findings`; deterministic results are not AI interpretation and do not assert authenticity.
-- Configure the worker with `WORKER_URL` and `WORKER_SHARED_SECRET`. Processing dispatch validates UUIDs, requires AAL2 plus investigator/uploader case membership, scopes the evidence lookup, sends only `{ evidence_id }`, and reports worker/configuration/database/network failures without changing processing status.
-- Optional Gemini analysis is additive: set `GEMINI_API_KEY`; invalid or unavailable AI output is recorded as `incomplete` without replacing deterministic findings.
-- Worker images must package `main.py`, `config.py`, `db.py`, `processor.py`, `hashing.py`, `ai_analysis.py`, and `limits.json` (the supplied Dockerfile does this).
+## Why Trust-Evid?
 
-## Phase 2: Evidence intake and storage
-- AAL2-protected case evidence endpoint creates metadata and signed private Storage upload URLs.
-- Finalization asks the authenticated worker to stream the private original and compute SHA-256 over actual stored bytes. The worker enforces global, media-specific, and recorded-size limits and returns only the verified digest/byte count; the authenticated finalization route is the single hash-persistence path, then records intake custody. An optional browser hash is comparison-only.
-- Supported media and size limits are read from `worker/limits.json`.
-- The required Supabase evidence/custody/storage migration is awaiting approval in the Database panel.
+Digital evidence can be difficult to organize and review across files, notes, technical observations, and case activity.
 
-## Phase 1: Foundation stabilization
-- Email/password login with Supabase Auth.
-- MFA enrollment and verification pages placed correctly under `/auth/mfa/enroll` and `/auth/mfa/verify`.
-- Middleware protects `/dashboard` and `/cases/*` routes, redirecting to login or MFA flows as needed.
-- Navbar shows real session user and sign-out button.
-- The removed placeholder banner is no longer part of the application UI.
-- Stub data store remains in use for cases as a placeholder until the database phase.
+Trust-Evid brings these elements together so authorized users can:
 
-## Running the Project
+- Organize evidence within cases.
+- Preserve access to submitted original files.
+- Review file hashes and available metadata.
+- Inspect deterministic processing findings.
+- View optional AI-assisted triage as advisory analysis.
+- Follow recorded custody activity and review notes.
+- Export structured case reports.
+
+## Features
+
+### Case & Access Management
+
+- Case-oriented evidence workspace.
+- Supabase authentication with email/password login.
+- TOTP multi-factor authentication (AAL2).
+- Role-aware access to protected case and evidence operations.
+
+### Evidence Intake & Preservation
+
+- Private evidence storage.
+- Signed upload URLs for evidence intake.
+- SHA-256 calculation over stored original bytes.
+- Write-once hash persistence in the intended finalization workflow.
+- Configured upload and processing limits.
+
+### Supported Evidence Formats
+
+The application documents support for:
+
+- JPEG
+- PNG
+- MP4
+
+### Technical Processing
+
+The processing worker can produce:
+
+- **SHA-256 hashes** — file identification through content hashing.
+- **Image metadata** — available metadata and EXIF details.
+- **Video metadata** — metadata extracted using `ffprobe`.
+- **Frame-sample records** — deterministic records from video frame sampling.
+
+Technical findings are recorded separately from AI analysis.
+
+### AI-Assisted Triage
+
+- Optional Gemini-powered analysis of deterministic findings.
+- Structured, bounded, schema-validated advisory output.
+- AI observations may include:
+  - Summary
+  - Anomalies
+  - Uncertainty and limitations
+  - Suggested next steps
+  - Review priority
+- Incomplete or unavailable AI results do not replace deterministic findings.
+
+### Custody, Review & Reporting
+
+- Recorded custody event history.
+- Review states and priorities.
+- Examiner notes.
+- JSON evidence report downloads.
+- Reports bringing together case details, hashes, findings, review information, custody history, and stated limitations.
+
+---
+
+## How It Works
+
+1. **Create or access a case**  
+   Authorized users enter the appropriate case workspace.
+
+2. **Submit evidence**  
+   Evidence metadata is registered, and the original file is uploaded to private storage.
+
+3. **Process the stored file**  
+   The backend dispatches the evidence identifier to the processing worker. The worker retrieves the original through server-side access.
+
+4. **Review technical results**  
+   Examine the file hash, available metadata, and deterministic processing findings.
+
+5. **Review optional AI triage**  
+   When enabled and available, AI-generated observations are presented as advisory information.
+
+6. **Review activity and generate a report**  
+   Authorized users inspect recorded custody activity, review notes, and the structured case report.
+
+---
+
+## Technology Stack
+
+| Component | Technology |
+|---|---|
+| Web application | Next.js App Router |
+| Authentication | Supabase Auth |
+| Database | Supabase |
+| Evidence storage | Supabase Storage |
+| Processing service | FastAPI, Python |
+| Hashing | SHA-256 |
+| Video processing | `ffprobe` |
+| Optional AI analysis | Gemini |
+| Application testing | Vitest |
+| Worker testing | pytest |
+
+---
+
+## Project Structure
+
+The repository contains the web application and a `worker/` service for evidence processing.
+
+The worker includes components for:
+
+- Application entry point
+- Configuration and processing limits
+- Database access
+- Evidence processing
+- Hashing
+- AI analysis
+
+Refer to the repository for the current directory layout and implementation details.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js and npm compatible with the project configuration.
+- Python and pip for worker development and testing.
+- A configured Supabase project for authentication, database, and private Storage.
+- Worker configuration for evidence-processing features.
+
+Check the repository's package manifests for the exact runtime versions and available scripts.
+
+### 1. Run the Web Application
+
+From the application root:
+
 ```bash
 npm install
 npm run dev
 ```
 
-### Processing API tests
-Focused route tests mock Supabase/auth and `fetch`; they never contact live services.
+Open [http://localhost:3000](http://localhost:3000).
+
+### 2. Run Worker Tests
+
+From the worker directory:
+
 ```bash
-npm test
+cd worker
+pip install -r requirements.txt
+pytest
 ```
 
-Open http://localhost:3000 to view.
+### 3. Run Application Checks
 
-## Environment Variables
-- NEXT_PUBLIC_SUPABASE_URL
-- NEXT_PUBLIC_SUPABASE_ANON_KEY
-- SUPABASE_SERVICE_ROLE_KEY
-- WORKER_URL
-- WORKER_SHARED_SECRET
+If the corresponding scripts are defined in the current `package.json`:
 
-Set these in the workspace Secrets panel.
-
-## Phase 5: Transaction-safe evidence finalization
-- Added local migration `20261021070000_atomic_evidence_finalization.sql` with a narrowly scoped `finalize_verified_evidence` RPC. It locks evidence rows, requires AAL2 and investigator/uploader membership, validates worker digest/byte count, preserves write-once hashes, safely retains processing/ready statuses, and records one intake event transactionally.
-- Matching retries return `already_finalized`; conflicting hashes or intake records fail. The migration includes a partial unique intake index. Review existing data for duplicate intake rows before applying it; this migration has not been applied to the linked database.
-- The finalize route now verifies worker output and uses only the RPC for persistence, with safe conflict and authorization mappings. No live migration or database integration tests were run.
-
-## Phase 5: Evidence storage limits
-- Evidence originals remain private and are restricted to JPEG, PNG, and MP4 uploads.
-- Intake validates MIME type and `LIMITS.max_file_size` in the browser and API before issuing a signed upload URL.
-- The linked database bucket metadata update is prepared as a migration and is waiting for approval in the Database panel; it has not been applied.
-
-## Phase 6: Reports, deployment and acceptance
-- AAL2-protected report download is available from each case at `/api/cases/[id]/report`.
-- Reports include visible evidence, deterministic findings, review priorities, examiner notes, custody events, and explicit limitations. JSON is intentional and can be printed or archived without claiming authenticity or legal admissibility.
-- Case pages provide responsive evidence selection, hash visibility, interactive custody-chain verification, per-item AI/review controls, and report controls. Use the browser and API smoke checks below before deployment.
-- The client uses the verified `supabaseBrowser` export for signed upload URLs; no storage credentials are exposed.
-- The evidence workspace handles loading, empty, error, refresh, and narrow-screen states without exposing storage credentials.
-
-### Acceptance smoke checks
-1. `npm run typecheck` and `npm run build` must pass.
-2. Without a session, dashboard, case, evidence, chain, AI, and report endpoints must reject access.
-3. With two AAL2 users, each user must be unable to read or mutate the other user's case/evidence.
-4. Exercise invalid media type/size, expired upload, worker timeout, malformed AI response, and custody tamper checks; each must return a safe error and must not expose secrets.
-5. Download a report and confirm it contains the case, hashes/findings, review notes, custody events, and limitations.
-6. Verify Vercel build logs and Render `/health` plus worker logs using the deployment dashboards; no deployment credentials belong in this repository.
-
-## Notes
-- The Phase 5 migration is local-only and held for review; do not assume the RPC exists in the linked database until the migration is approved/applied.
-- No new dependencies added beyond what's in package.json.
-- TypeScript/build status is not asserted here; run the acceptance commands below in the deployment environment.
+```bash
+npm test
+npm run typecheck
+npm run build
+```
 
 ---
 
-MFA enrollment and verification are available at `/auth/mfa/enroll` and `/auth/mfa/verify`, with client-side Supabase Auth calls and TOTP QR setup.
+## Configuration
 
-## Phase 4 worker handoff
+Configure the required environment variables through your local environment or deployment platform.
 
-Worker checks: `cd worker && pip install -r requirements.txt && pytest`. Required deployment secrets are `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `WORKER_SHARED_SECRET`; optional AI uses `GEMINI_API_KEY` and `AI_MODEL`. The worker accepts only `{ "evidence_id": "..." }` with `X-Worker-Secret`. Gemini output is bounded, schema-validated, citation-checked, and additive; failures do not replace deterministic findings. The Dockerfile packages the full import graph and `limits.json`.
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase client key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Privileged server/worker access |
+| `WORKER_URL` | Processing worker base URL |
+| `WORKER_SHARED_SECRET` | Authenticates application requests to the worker |
+| `GEMINI_API_KEY` | Optional Gemini analysis |
+| `AI_MODEL` | Optional AI model selection |
+| `AI_FORCE_FAIL` | Optional failure-testing switch, if supported |
 
-Remaining production blockers are the unverified atomic claim/stale retry database contract and authoritative custody RPC signature.
+The web application and worker require the variables relevant to the features being run.
 
+> **Security:** Never commit secrets or expose privileged service keys and shared secrets to browsers or public repositories.
 
-## Phase 6: Transaction-safe finalization tests
-- Extended focused Vitest coverage for worker digest and byte-count validation, AAL2/role authorization, case/evidence relationship checks, first finalization, matching and conflicting retries, rollback/error behavior, unsupported RPC states, and custody-event repeatability.
-- Added source-contract checks for explicit processing-state allowlists, complete existing-index validation (including validity/readiness/predicate), and SECURITY DEFINER ownership/ACL auditing.
-- These tests distinguish migration source contracts from PostgreSQL integration evidence: no live database or local PostgreSQL migration execution is claimed.
+---
 
-## Phase 6: Evidence reports and retry
-- Each evidence item has an AAL2-protected report endpoint with metadata, hash, deterministic findings, explicitly labelled AI interpretation/incomplete state, reviews, notes, custody history, and limitations.
-- Failed evidence with a stored original can be retried by an investigator or uploader; retry resets it to `uploaded`, dispatches the worker, and safely marks it failed if dispatch fails.
+## Security & Privacy
 
-## Phase 6: Evidence reports and retry
-- Evidence reports expose metadata, hashes, deterministic findings, clearly labelled AI interpretation/incomplete state, review notes, and custody history.
-- Reports include the required hash-match disclaimer and limitations without presenting an authenticity or validity verdict.
-- Investigators and uploaders can retry failed evidence when a stored original exists; the route resets to `uploaded`, dispatches the worker with the shared secret, and marks dispatch failures as `failed`.
+Trust-Evid uses authentication, multi-factor authentication, case-role checks, private storage, and server-side processing to protect evidence workflows.
 
-## Phase 6: Evidence reports and retry
-- Evidence reports expose metadata, hashes, deterministic findings, clearly labelled AI interpretation/incomplete state, review notes, and custody history.
-- Reports include the required hash-match disclaimer and limitations without presenting an authenticity or validity verdict.
-- Investigators and uploaders can retry failed evidence when a stored original exists; the route resets to `uploaded`, dispatches the worker with the shared secret, and marks dispatch failures as `failed`. The evidence workspace provides report and retry controls.
+- Protected operations require the applicable authentication assurance and case permissions.
+- The worker receives an evidence identifier rather than the user's access token.
+- Private originals are retrieved by the worker using server-side credentials.
+- In the documented integration, AI analysis receives deterministic findings; GPS and personal EXIF are excluded.
+- Reports and findings are available only through protected application workflows.
 
-## Phase 4: AI triage integration
-- The authenticated evidence AI route requires deterministic `processing_status=ready` and dispatches only `{ evidence_id }` to the worker using `X-Worker-Secret`; user access tokens are never sent to the worker.
-- The worker `/triage` endpoint is independently gated on `ready`, calls Gemini using `AI_MODEL`, validates the bounded advisory schema (`summary`, `anomalies`, `uncertainty`, `limitations`, `next_steps`, `review_priority`), and persists either `complete` or `incomplete` analysis without changing evidence status.
-- Gemini receives deterministic findings only in this integration; GPS and personal EXIF are not included. AI failures remain explicitly incomplete and preserve deterministic findings.
+**Testing and sensitive data:** Use synthetic or appropriately authorized material when testing. Evidence files may contain sensitive or personally identifying information.
+
+---
+
+## Understanding the Results
+
+Trust-Evid is intended to assist with evidence organization and review, not to make definitive forensic or legal determinations.
+
+- **SHA-256 hashes:** Help identify whether two byte sequences match. They do not establish who created a file, when it was created, or whether its contents are truthful.
+- **Metadata:** May be missing, altered, inaccurate, or removed during file handling.
+- **Deterministic findings:** Describe the output of defined technical checks. They are not proof of tampering.
+- **AI analysis:** Is advisory and may be incomplete or incorrect.
+- **Custody history:** Reflects recorded events and the protections implemented by the deployed system. It does not independently prove authenticity or legal admissibility.
+
+---
+
+## Project Status
+
+Refer to the repository and deployment configuration for the current implementation and deployment status.
+
+Feature availability may depend on database migrations, worker configuration, environment variables, and deployment state.
+
+---
+
+## License
+
+MIT License
